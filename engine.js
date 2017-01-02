@@ -73,6 +73,7 @@ Map.prototype.update = function(seconds) {
 	if (this.light > 0) this.light = Math.max(this.light - 10 * seconds, 0);
 	else if (Math.random() * 5 < seconds) this.light = 2;
 };
+
 function Camera(canvas, resolution, focalLength) {
 	this.ctx = canvas.getContext('2d');
 	this.width = canvas.width = window.innerWidth * 0.5;
@@ -106,7 +107,7 @@ Camera.prototype.drawColumn = function(column, ray, angle, map) {
 	var ctx = this.ctx;
 	var texture = map.wallTexture;
 	var left = Math.floor(column * this.spacing);
-	var width - Math.ceil(this.spacing);
+	var width = Math.ceil(this.spacing);
 	var hit = -1;
 	while (++hit < ray.length && ray[hit].height <= 0);
 	for (var s = ray.length - 1; s >= 0; s--) {
