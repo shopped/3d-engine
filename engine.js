@@ -17,7 +17,7 @@ function Player(x, y, direction) {
 function Map(size) {
 	this.size = size;
 	this.wallGrid = new Uint8Array(size * size);
-	this.wallTexture = new Bitmap('assets.wall_texture.jpg', 1024, 1024);
+	this.wallTexture = new Bitmap('assets/wall_texture.jpg', 1024, 1024);
 	this.light = 0;
 }
 Map.prototype.get = function(x, y) {
@@ -165,8 +165,8 @@ var loop = new GameLoop();
 map.randomize();
 
 loop.start(function frame(seconds) {
-	map.update(seconds);
-	player.update(controls,states, map, seconds);
+	//map.update(seconds);
+	//player.update(controls,states, map, seconds);
 	camera.render(player, map);
 });
 
