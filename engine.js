@@ -13,7 +13,23 @@ function Player(x, y, direction) {
 	this.y = y;
 	this.direction = direction;
 }
-Player.prototype.rotate = function(angle) {
+Player.prototype.move = function(forwards) {
+	var magnitude = .5;
+	console.log(this.direction);
+	var magX = Math.cos(this.direction);
+	var magY = Math.sin(this.direction);
+	if (forwards === false) {
+		magX = -magX;
+		magY = -magY;
+	}
+	console.log(magX);
+	this.x = this.x + magnitude*magX;
+	this.y = this.y + magnitude*magY;
+}
+Player.prototype.rotate = function(dirangle) {
+	var angle = .08;
+	if (dirangle === false)
+		angle = -angle;
 	this.direction = (this.direction + angle + CIRCLE) % CIRCLE;
 }
 
@@ -33,6 +49,8 @@ Map.prototype.randomize = function() {
 	for (var i = 0; i < this.size * this.size; i++) {
 		this.wallGrid[i] = Math.random() < 0.3 ? 1 : 0;
 	}
+	this.wallGrid[0] = 0;
+	this.wallGrid[1] = 1;
 };
 Map.prototype.cast = function(point, angle, range) {
 	var self = this;
@@ -97,6 +115,7 @@ Camera.prototype.render = function(player, map) {
 };
 Camera.prototype.drawMinimap = function(map) {
 	var ctx = this.ctx;
+	var mapscale = 2;
 	ctx.save();
 	ctx.beginPath();
 	for (var i = 0; i < map.wallGrid.length; i++) {
@@ -107,12 +126,15 @@ Camera.prototype.drawMinimap = function(map) {
 		} else {
 			ctx.fillStyle = '#ffffff';
 		}
-		ctx.fillRect(x, y, 1, 1)
+		ctx.fillRect(x * mapscale, y*mapscale, mapscale, mapscale)
 	}
+	ctx.fillStyle = '#ff0000';
+	ctx.fillRect(player.x*mapscale, player.y*mapscale, mapscale, mapscale);
 	this.ctx.restore();
 }
 Camera.prototype.drawColumns = function(player, map) {
 	this.ctx.save();
+	this.ctx.fillRect(0, 0, 1000, 1000);
 	for (var column = 0; column < this.resolution; column++) {
 		var x = column / this.resolution - 0.5;
 		var angle = Math.atan2(x, this.focalLength);
@@ -173,7 +195,7 @@ GameLoop.prototype.frame = function(time) {
 
 
 var display = document.getElementById('display');
-var player = new Player(15.3, -1.2, Math.PI * 0.3);
+var player = new Player(0, 0, 0);
 var map = new Map(32);
 var camera = new Camera(display, MOBILE ? 160 : 320, 0.8);
 var loop = new GameLoop();
@@ -182,7 +204,26 @@ map.randomize();
 
 loop.start(function frame(seconds) {
 	map.update(seconds);
-	player.rotate(-Math.PI * (seconds / 10));
+	//player.rotate(-Math.PI * (seconds / 10));
 	//player.update(controls,states, map, seconds);
 	camera.render(player, map);
+});
+
+Mousetrap.bind('a', function () {
+	player.rotate(false);
+	//camera.render(player, map);
+});
+Mousetrap.bind('d', function () {
+	player.rotate(true);
+	//camera.render(player, map);
+});
+Mousetrap.bind('w', function() {
+	player.move(true);
+});
+Mousetrap.bind('s', function() {
+	player.move(false);
+});
+Mousetrap.bind('m', function () {
+	minimap = !minimap;
+	console.log(minimap);
 });
