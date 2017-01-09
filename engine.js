@@ -13,6 +13,9 @@ function Player(x, y, direction) {
 	this.y = y;
 	this.direction = direction;
 }
+Player.prototype.rotate = function(angle) {
+	this.direction = (this.direction + angle + CIRCLE) % CIRCLE;
+}
 
 function Map(size) {
 	this.size = size;
@@ -49,7 +52,7 @@ Map.prototype.cast = function(point, angle, range) {
 	}
 	function step(rise, run, x, y, inverted) {
 		if (run == 0) return noWall;
-		var dx = run > 0 ? Math.floor(x + 1) - x : Math.ciel(x - 1) - x;
+		var dx = run > 0 ? Math.floor(x + 1) - x : Math.ceil(x - 1) - x;
 		var dy = dx * (rise / run);
 		return {
 			x: inverted ? y + dy : x + dx,
@@ -68,7 +71,6 @@ Map.prototype.cast = function(point, angle, range) {
 		return step;
 	}
 };
-
 Map.prototype.update = function(seconds) {
 	if (this.light > 0) this.light = Math.max(this.light - 10 * seconds, 0);
 	else if (Math.random() * 5 < seconds) this.light = 2;
@@ -85,13 +87,30 @@ function Camera(canvas, resolution, focalLength) {
 	this.lightRange = 5;
 	this.scale = (this.width + this.height) / 1200;
 }
-
 Camera.prototype.render = function(player, map) {
 	//this.drawSky(player.direction, map.skybox, map.light);
 	this.drawColumns(player, map);
+	if(minimap==true){
+		this.drawMinimap(map);
+	}
 	//this.drawWeapon(player.weapon, player.paces);
 };
-
+Camera.prototype.drawMinimap = function(map) {
+	var ctx = this.ctx;
+	ctx.save();
+	ctx.beginPath();
+	for (var i = 0; i < map.wallGrid.length; i++) {
+		var x = (i % 32);
+		var y = Math.floor(i / 32);
+		if (map.wallGrid[i] == 1) {
+			ctx.fillStyle = '#000000';
+		} else {
+			ctx.fillStyle = '#ffffff';
+		}
+		ctx.fillRect(x, y, 1, 1)
+	}
+	this.ctx.restore();
+}
 Camera.prototype.drawColumns = function(player, map) {
 	this.ctx.save();
 	for (var column = 0; column < this.resolution; column++) {
@@ -102,7 +121,6 @@ Camera.prototype.drawColumns = function(player, map) {
 	}
 	this.ctx.restore();
 };
-
 Camera.prototype.drawColumn = function(column, ray, angle, map) {
 	var ctx = this.ctx;
 	var texture = map.wallTexture;
@@ -127,7 +145,6 @@ Camera.prototype.drawColumn = function(column, ray, angle, map) {
 		ctx.globalAlpha = 0.15;
 	}
 };
-
 Camera.prototype.project = function(height, angle, distance) {
 	var z = distance * Math.cos(angle);
 	var wallHeight = this.height * height / z;
@@ -139,19 +156,17 @@ Camera.prototype.project = function(height, angle, distance) {
 };
 
 function GameLoop() {
-	this.frame = this.frame.bind(this);
+	this.frame = this.frame.bind(this); // calling frame will call loop.frame
 	this.lastTime = 0;
 	this.callback = function () {};
 }
-
 GameLoop.prototype.start = function(callback) {
-	this.callback = callback;
-	requestAnimationFrame(this.frame);
+	this.callback = callback; // will run the callback function after completion
+	requestAnimationFrame(this.frame); // what is this?
 };
-
 GameLoop.prototype.frame = function(time) {
 	var seconds = (time - this.lastTime) / 1000;
-	this.lateTime = time;
+	this.lastTime = time;
 	if (seconds < 0.2) this.callback(seconds);
 	requestAnimationFrame(this.frame);
 };
@@ -162,11 +177,12 @@ var player = new Player(15.3, -1.2, Math.PI * 0.3);
 var map = new Map(32);
 var camera = new Camera(display, MOBILE ? 160 : 320, 0.8);
 var loop = new GameLoop();
+var minimap = true;
 map.randomize();
 
 loop.start(function frame(seconds) {
-	//map.update(seconds);
+	map.update(seconds);
+	player.rotate(-Math.PI * (seconds / 10));
 	//player.update(controls,states, map, seconds);
 	camera.render(player, map);
 });
-
