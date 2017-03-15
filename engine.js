@@ -11,20 +11,31 @@ function Bitmap(src, width, height) {
 function Player(x, y, direction) {
 	this.x = x;
 	this.y = y;
+	this.magnitude = 0;
 	this.direction = direction;
 }
 Player.prototype.move = function(forwards) {
-	var magnitude = .5;
-	console.log(this.direction);
+	if (forwards === true) {
+		if (this.magnitude < .4)
+			this.magnitude += .1;
+	} else {
+		if (this.magnitude > -.4)
+			this.magnitude -= .1;
+	}
+
+}
+Player.prototype.inertia = function() {
 	var magX = Math.cos(this.direction);
 	var magY = Math.sin(this.direction);
-	if (forwards === false) {
-		magX = -magX;
-		magY = -magY;
-	}
-	console.log(magX);
-	this.x = this.x + magnitude*magX;
-	this.y = this.y + magnitude*magY;
+	this.x = this.x + this.magnitude * magX;
+	this.y = this.y + this.magnitude * magY;
+	console.log(this.magnitude);
+	if (this.magnitude > 0)
+		this.magnitude -= .1;
+	if (this.magnitude < 0)
+		this.magnitude += .1;
+	//vx /= 2;
+	//vy /= 2;
 }
 Player.prototype.rotate = function(dirangle) {
 	var angle = .08;
@@ -49,8 +60,6 @@ Map.prototype.randomize = function() {
 	for (var i = 0; i < this.size * this.size; i++) {
 		this.wallGrid[i] = Math.random() < 0.3 ? 1 : 0;
 	}
-	this.wallGrid[0] = 0;
-	this.wallGrid[1] = 1;
 };
 Map.prototype.cast = function(point, angle, range) {
 	var self = this;
@@ -115,21 +124,34 @@ Camera.prototype.render = function(player, map) {
 };
 Camera.prototype.drawMinimap = function(map) {
 	var ctx = this.ctx;
-	var mapscale = 2;
+	var mapscale = 1;
+	var ms = mapscale;
 	ctx.save();
 	ctx.beginPath();
 	for (var i = 0; i < map.wallGrid.length; i++) {
-		var x = (i % 32);
-		var y = Math.floor(i / 32);
+		var x = (i % map.size);
+		var y = Math.floor(i / map.size);
+		x += 1;
+		y += 1;
 		if (map.wallGrid[i] == 1) {
 			ctx.fillStyle = '#000000';
 		} else {
 			ctx.fillStyle = '#ffffff';
 		}
-		ctx.fillRect(x * mapscale, y*mapscale, mapscale, mapscale)
+		ctx.fillRect(x * ms, y*ms, ms, ms)
+	}
+	ctx.fillStyle = '#00ff00';
+	if (player.direction <= Math.PI / 4 || player.direction >= (7/4)*Math.PI) {
+		ctx.fillRect(ms*33, ms, ms, ms*32);
+	} else if (player.direction <= (3/4)*Math.PI) {
+		ctx.fillRect(ms, ms*33, ms*32, ms);
+	} else if (player.direction <= 3*Math.PI/2) {
+		ctx.fillRect(0, ms, ms, ms*32);
+	} else {
+		ctx.fillRect(ms, 0, ms*32, ms);
 	}
 	ctx.fillStyle = '#ff0000';
-	ctx.fillRect(player.x*mapscale, player.y*mapscale, mapscale, mapscale);
+	ctx.fillRect(player.x*ms, player.y*ms, ms, ms);
 	this.ctx.restore();
 }
 Camera.prototype.drawColumns = function(player, map) {
@@ -191,13 +213,14 @@ GameLoop.prototype.frame = function(time) {
 	this.lastTime = time;
 	if (seconds < 0.2) this.callback(seconds);
 	requestAnimationFrame(this.frame);
+	player.inertia();
 };
 
 
 var display = document.getElementById('display');
-var player = new Player(0, 0, 0);
-var map = new Map(32);
-var camera = new Camera(display, MOBILE ? 160 : 320, 0.8);
+var player = new Player(16, 16, 0);
+var map = new Map(64);
+var camera = new Camera(display, MOBILE ? 160 : 640, 0.8);
 var loop = new GameLoop();
 var minimap = true;
 map.randomize();
