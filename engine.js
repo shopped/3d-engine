@@ -12,14 +12,15 @@ function Player(x, y, direction) {
 	this.x = x;
 	this.y = y;
 	this.magnitude = 0;
+	this.angular_momentum = 0;
 	this.direction = direction;
 }
 Player.prototype.move = function(forwards) {
 	if (forwards === true) {
-		if (this.magnitude < .4)
-			this.magnitude += .1;
-	} else {
-		if (this.magnitude > -.4)
+		if (this.magnitude < .3) //.3 is max speed
+			this.magnitude += .1; //.1 is acceleration
+	} else {						// you can notice that max speed is 3x acceleration which is 3x friction
+		if (this.magnitude > -.3)
 			this.magnitude -= .1;
 	}
 
@@ -29,19 +30,41 @@ Player.prototype.inertia = function() {
 	var magY = Math.sin(this.direction);
 	this.x = this.x + this.magnitude * magX;
 	this.y = this.y + this.magnitude * magY;
-	console.log(this.magnitude);
-	if (this.magnitude > 0)
-		this.magnitude -= .1;
-	if (this.magnitude < 0)
-		this.magnitude += .1;
-	//vx /= 2;
-	//vy /= 2;
+	//console.log(this.magnitude); //save this for debugging friction
+	if (this.magnitude > 0){ // positive friction
+		this.magnitude -= .03;
+	}
+	else if (this.magnitude < 0){ //negative friction
+		this.magnitude += .03;
+	}
+	if (Math.abs(this.magnitude) < .03) //comes to an absolute stop if momentum is less than friction
+		this.magnitude = 0;
 }
+
+var MAX_ANGULAR_VELOCITY = mav = .3;
+var RATE_ANGULAR_ACCELERATION = raa = .1;
+var RATE_ANGULAR_FRICTION = raf = .07;
+
 Player.prototype.rotate = function(dirangle) {
-	var angle = .08;
-	if (dirangle === false)
-		angle = -angle;
-	this.direction = (this.direction + angle + CIRCLE) % CIRCLE;
+	if (dirangle === true) { //postive rotation
+		if (this.angular_momentum < MAX_ANGULAR_VELOCITY)
+		this.angular_momentum += raa;
+
+	} else { //negative rotation
+		if (this.angular_momentum > -1*MAX_ANGULAR_VELOCITY)
+		this.angular_momentum -= raa;
+	}
+}
+
+Player.prototype.angular_inertia = function() {
+	this.direction = (this.direction + this.angular_momentum + CIRCLE) % CIRCLE;
+	if (this.angular_momentum > 0) //positive friction
+		this.angular_momentum -= RATE_ANGULAR_FRICTION;
+	else if (this.angular_momentum < 0) //negative friction
+		this.angular_momentum += RATE_ANGULAR_FRICTION;
+
+	if (Math.abs(this.angular_momentum) < raf)
+		this.angular_momentum = 0;
 }
 
 function Map(size) {
@@ -141,7 +164,7 @@ Camera.prototype.drawMinimap = function(map) {
 		ctx.fillRect(x * ms, y*ms, ms, ms)
 	}
 	ctx.fillStyle = '#00ff00';
-	if (player.direction <= Math.PI / 4 || player.direction >= (7/4)*Math.PI) {
+	/**if (player.direction <= Math.PI / 4 || player.direction >= (7/4)*Math.PI) {
 		ctx.fillRect(ms*33, ms, ms, ms*32);
 	} else if (player.direction <= (3/4)*Math.PI) {
 		ctx.fillRect(ms, ms*33, ms*32, ms);
@@ -149,7 +172,7 @@ Camera.prototype.drawMinimap = function(map) {
 		ctx.fillRect(0, ms, ms, ms*32);
 	} else {
 		ctx.fillRect(ms, 0, ms*32, ms);
-	}
+	}**/
 	ctx.fillStyle = '#ff0000';
 	ctx.fillRect(player.x*ms, player.y*ms, ms, ms);
 	this.ctx.restore();
@@ -214,6 +237,7 @@ GameLoop.prototype.frame = function(time) {
 	if (seconds < 0.2) this.callback(seconds);
 	requestAnimationFrame(this.frame);
 	player.inertia();
+	player.angular_inertia();
 };
 
 
@@ -227,18 +251,14 @@ map.randomize();
 
 loop.start(function frame(seconds) {
 	map.update(seconds);
-	//player.rotate(-Math.PI * (seconds / 10));
-	//player.update(controls,states, map, seconds);
 	camera.render(player, map);
 });
 
 Mousetrap.bind('a', function () {
 	player.rotate(false);
-	//camera.render(player, map);
 });
 Mousetrap.bind('d', function () {
 	player.rotate(true);
-	//camera.render(player, map);
 });
 Mousetrap.bind('w', function() {
 	player.move(true);
@@ -249,4 +269,18 @@ Mousetrap.bind('s', function() {
 Mousetrap.bind('m', function () {
 	minimap = !minimap;
 	console.log(minimap);
+});
+
+Mousetrap.bind('left', function () {
+	player.rotate(false);
+});
+
+Mousetrap.bind('right', function () {
+	player.rotate(true);
+});
+Mousetrap.bind('up', function() {
+	player.move(true);
+});
+Mousetrap.bind('down', function() {
+	player.move(false);
 });
